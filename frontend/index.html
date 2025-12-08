@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>엑셀 파일 리더</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+
+        .upload-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-label {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-size: 16px;
+        }
+
+        .file-label:hover {
+            background: #5568d3;
+        }
+
+        .file-name {
+            display: block;
+            margin-top: 10px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        button {
+            padding: 12px 40px;
+            background: #764ba2;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #653a8e;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .result-section {
+            margin-top: 30px;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        tr:hover {
+            background: #f5f5f5;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-size: 18px;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>엑셀 파일 리더</h1>
+
+        <div class="upload-section">
+            <div class="file-input-wrapper">
+                <input type="file" id="fileInput" accept=".xlsx,.xls" />
+                <label for="fileInput" class="file-label">파일 선택</label>
+                <span class="file-name" id="fileName">선택된 파일 없음</span>
+            </div>
+            <br>
+            <button id="uploadBtn" disabled>업로드</button>
+        </div>
+
+        <div class="result-section" id="resultSection" style="display: none;">
+            <div class="message" id="message"></div>
+            <div class="table-container" id="tableContainer"></div>
+        </div>
+
+        <div class="loading" id="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>파일을 처리하는 중입니다...</p>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const resultSection = document.getElementById('resultSection');
+        const message = document.getElementById('message');
+        const tableContainer = document.getElementById('tableContainer');
+        const loading = document.getElementById('loading');
+
+        const API_URL = 'http://localhost:8080/api/excel/upload';
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                fileName.textContent = file.name;
+                uploadBtn.disabled = false;
+            } else {
+                fileName.textContent = '선택된 파일 없음';
+                uploadBtn.disabled = true;
+            }
+        });
+
+        uploadBtn.addEventListener('click', async () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            loading.style.display = 'block';
+            resultSection.style.display = 'none';
+            uploadBtn.disabled = true;
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                loading.style.display = 'none';
+                resultSection.style.display = 'block';
+                uploadBtn.disabled = false;
+
+                if (data.success) {
+                    message.className = 'message success';
+                    message.textContent = data.message;
+                    displayTable(data.data);
+                } else {
+                    message.className = 'message error';
+                    message.textContent = data.message;
+                    tableContainer.innerHTML = '';
+                }
+            } catch (error) {
+                loading.style.display = 'none';
+                resultSection.style.display = 'block';
+                uploadBtn.disabled = false;
+
+                message.className = 'message error';
+                message.textContent = '서버와 통신 중 오류가 발생했습니다: ' + error.message;
+                tableContainer.innerHTML = '';
+            }
+        });
+
+        function displayTable(data) {
+            if (!data || data.length === 0) {
+                tableContainer.innerHTML = '<p style="text-align: center; color: #999;">데이터가 없습니다.</p>';
+                return;
+            }
+
+            const headers = Object.keys(data[0]);
+
+            let tableHtml = '<table><thead><tr>';
+            headers.forEach(header => {
+                tableHtml += `<th>${header}</th>`;
+            });
+            tableHtml += '</tr></thead><tbody>';
+
+            data.forEach(row => {
+                tableHtml += '<tr>';
+                headers.forEach(header => {
+                    const value = row[header];
+                    const displayValue = value !== null && value !== undefined ? value : '';
+                    tableHtml += `<td>${displayValue}</td>`;
+                });
+                tableHtml += '</tr>';
+            });
+
+            tableHtml += '</tbody></table>';
+            tableContainer.innerHTML = tableHtml;
+        }
+    </script>
+</body>
+</html>
