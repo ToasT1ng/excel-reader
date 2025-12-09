@@ -42,3 +42,11 @@ tasks.withType<KotlinCompile> {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+tasks.register<JavaExec>("createEdgeCaseExcel") {
+    group = "application"
+    description = "Create Excel file with null and edge cases"
+    mainClass.set("CreateEdgeCaseExcelKt")
+    classpath = sourceSets["main"].runtimeClasspath + files(projectDir)
+    workingDir = projectDir
+}

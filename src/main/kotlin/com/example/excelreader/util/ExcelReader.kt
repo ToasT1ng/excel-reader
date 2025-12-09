@@ -150,9 +150,36 @@ object ExcelReader {
         return when {
             value == null -> null
             targetType == String::class -> value.toString()
-            targetType == Int::class -> (value as? Double)?.toInt() ?: value
-            targetType == Long::class -> (value as? Double)?.toLong() ?: value
-            targetType == Double::class -> value as? Double
+            targetType == Int::class -> {
+                when (value) {
+                    is Double -> value.toInt()
+                    is String -> parseStringToInt(value)
+                    else -> {
+                        println("Int 변환 불가: ${value::class.simpleName} -> $value")
+                        null
+                    }
+                }
+            }
+            targetType == Long::class -> {
+                when (value) {
+                    is Double -> value.toLong()
+                    is String -> parseStringToLong(value)
+                    else -> {
+                        println("Long 변환 불가: ${value::class.simpleName} -> $value")
+                        null
+                    }
+                }
+            }
+            targetType == Double::class -> {
+                when (value) {
+                    is Double -> value
+                    is String -> parseStringToDouble(value)
+                    else -> {
+                        println("Double 변환 불가: ${value::class.simpleName} -> $value")
+                        null
+                    }
+                }
+            }
             targetType == LocalDate::class -> {
                 when (value) {
                     is LocalDateTime -> value.toLocalDate()
@@ -168,8 +195,68 @@ object ExcelReader {
                     else -> null
                 }
             }
-            targetType == Boolean::class -> value as? Boolean
+            targetType == Boolean::class -> {
+                when (value) {
+                    is Boolean -> value
+                    is Double -> value != 0.0
+                    is String -> parseStringToBoolean(value)
+                    else -> null
+                }
+            }
             else -> value
+        }
+    }
+
+    private fun parseStringToInt(value: String): Int? {
+        val trimmed = value.trim()
+        if (trimmed.isBlank()) return null
+
+        // 숫자만 추출 (음수 부호 포함)
+        val numericString = trimmed.replace(Regex("[^0-9-]"), "")
+        return try {
+            numericString.toIntOrNull()
+        } catch (e: Exception) {
+            println("Int 파싱 실패: $value")
+            null
+        }
+    }
+
+    private fun parseStringToLong(value: String): Long? {
+        val trimmed = value.trim()
+        if (trimmed.isBlank()) return null
+
+        val numericString = trimmed.replace(Regex("[^0-9-]"), "")
+        return try {
+            numericString.toLongOrNull()
+        } catch (e: Exception) {
+            println("Long 파싱 실패: $value")
+            null
+        }
+    }
+
+    private fun parseStringToDouble(value: String): Double? {
+        val trimmed = value.trim()
+        if (trimmed.isBlank()) return null
+
+        // 쉼표 제거하고 숫자, 소수점, 음수 부호만 추출
+        val numericString = trimmed.replace(",", "").replace(Regex("[^0-9.-]"), "")
+        return try {
+            numericString.toDoubleOrNull()
+        } catch (e: Exception) {
+            println("Double 파싱 실패: $value")
+            null
+        }
+    }
+
+    private fun parseStringToBoolean(value: String): Boolean? {
+        val trimmed = value.trim().lowercase()
+        return when (trimmed) {
+            "true", "yes", "y", "1" -> true
+            "false", "no", "n", "0" -> false
+            else -> {
+                println("Boolean 파싱 실패: $value")
+                null
+            }
         }
     }
 
