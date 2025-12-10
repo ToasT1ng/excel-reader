@@ -34,3 +34,20 @@ logs/
 *.tmp
 *.swp
 *~
+
+# Kotlin script files in root
+/CreateSampleExcel.kt
+/CreateEdgeCaseExcel.kt
+
+# Python virtual environment
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Excel temporary files
+~$*.xlsx
+~$*.xls
+
+# Gradle wrapper (non-standard version)
+gradle-8.5/
