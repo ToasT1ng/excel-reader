@@ -182,9 +182,9 @@
 
         <div class="upload-section">
             <div class="file-input-wrapper">
-                <input type="file" id="fileInput" accept=".xlsx,.xls" />
+                <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" />
                 <label for="fileInput" class="file-label">파일 선택</label>
-                <span class="file-name" id="fileName">선택된 파일 없음</span>
+                <span class="file-name" id="fileName">선택된 파일 없음 (.xlsx, .xls, .csv)</span>
             </div>
             <br>
             <button id="uploadBtn" disabled>업로드</button>
@@ -210,7 +210,8 @@
         const tableContainer = document.getElementById('tableContainer');
         const loading = document.getElementById('loading');
 
-        const API_URL = 'http://localhost:8080/api/excel/upload';
+        const EXCEL_API_URL = 'http://localhost:8080/api/excel/upload';
+        const CSV_API_URL = 'http://localhost:8080/api/excel/upload-csv';
 
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -234,8 +235,12 @@
             resultSection.style.display = 'none';
             uploadBtn.disabled = true;
 
+            // 파일 확장자에 따라 API URL 선택
+            const fileExtension = file.name.split('.').pop().toLowerCase();
+            const apiUrl = fileExtension === 'csv' ? CSV_API_URL : EXCEL_API_URL;
+
             try {
-                const response = await fetch(API_URL, {
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     body: formData
                 });
